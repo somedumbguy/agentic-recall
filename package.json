@@ -1,0 +1,24 @@
+{
+  "name": "openclaw-omega",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.1.29"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.3.3",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

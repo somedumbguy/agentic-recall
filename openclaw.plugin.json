@@ -1,0 +1,24 @@
+{
+  "id": "openclaw-omega",
+  "name": "OMEGA Memory",
+  "description": "Automatic memory capture and recall backed by OMEGA's local-first memory engine",
+  "kind": "memory",
+  "version": "1.0.0",
+  "license": "MIT",
+  "configKeys": {
+    "omegaPath": { "label": "OMEGA CLI Path", "help": "Path to omega CLI binary (auto-detected)" },
+    "pythonPath": { "label": "Python Path", "help": "Path to python3 binary", "advanced": true },
+    "dbPath": { "label": "Database Path", "help": "Path to OMEGA SQLite database", "advanced": true },
+    "autoRecall": { "label": "Auto-Recall", "help": "Automatically inject relevant memories before each turn" },
+    "autoCapture": { "label": "Auto-Capture", "help": "Automatically store conversations after each turn" },
+    "maxRecallResults": { "label": "Max Recall Results", "help": "Maximum memories injected per turn (1-20)" },
+    "profileFrequency": { "label": "Profile Frequency", "help": "Include user profile every N turns" },
+    "recallMinScore": { "label": "Recall Min Score", "help": "Minimum similarity score (0.0-1.0)" },
+    "captureMode": { "label": "Capture Mode", "help": "'all' = every turn, 'smart' = only meaningful turns" },
+    "captureMinLength": { "label": "Capture Min Length", "help": "Skip turns shorter than this", "advanced": true },
+    "captureMaxLength": { "label": "Capture Max Length", "help": "Skip turns longer than this", "advanced": true },
+    "dualSave": { "label": "Dual Save", "help": "Save both extracted facts and raw chunks" },
+    "containerTag": { "label": "Container Tag", "help": "Tag for memory organization" },
+    "debug": { "label": "Debug Mode", "help": "Enable debug logging", "advanced": true }
+  }
+}
