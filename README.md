@@ -1,8 +1,32 @@
-# openclaw-omega
+# agentic-recall
 
-**Implicit memory for AI coding agents — powered by OMEGA's local-first memory engine.**
+**Persistent, implicit memory for AI coding agents. No cloud. No manual notes. No tool calls. It just remembers.**
 
-Stop re-explaining yourself. `openclaw-omega` gives your AI agent persistent, semantic memory that captures decisions, preferences, lessons, and errors *automatically* — no manual notes, no cloud dependencies, no agent tool-call decisions required.
+---
+
+## Two Great Ideas, One Missing Piece
+
+Two open-source projects each solved half the memory problem for AI agents — but neither could solve it alone.
+
+**[Supermemory](https://github.com/supermemoryai/openclaw-supermemory)** nailed the UX. It figured out that memory should be *implicit* — captured and recalled automatically through lifecycle hooks, not through explicit tool calls the agent has to decide to make. When memory is a tool, agents forget to use it. When memory is a hook, it just works. Brilliant pattern. One problem: it requires a $20/month proprietary cloud API for the actual storage and retrieval. Your memories live on someone else's server.
+
+**[OMEGA](https://github.com/omega-memory/omega-memory)** nailed the engine. Local-first SQLite database with ONNX embeddings, semantic search, contradiction detection, time-decay scoring, typed memory categories, and graph relationships between memories. Everything runs on your machine. One problem: it's tool-based — the agent has to *choose* to call `remember()` and `recall()`. In practice, agents often don't.
+
+**agentic-recall** takes Supermemory's hook-based implicit capture/recall pattern and wires it to OMEGA's local-first intelligent memory engine. The result: memory that captures and recalls automatically on every turn, backed by a sophisticated local engine, with zero cloud dependency.
+
+| Capability | Supermemory | OMEGA | **agentic-recall** |
+|------------|------------|-------|--------------------|
+| Implicit capture (no agent decision) | ✅ Hook-based | ❌ Tool-based | ✅ |
+| Implicit recall (no agent decision) | ✅ Hook-based | ❌ Tool-based | ✅ |
+| Fully local / no cloud | ❌ $20/mo cloud API | ✅ SQLite + ONNX | ✅ |
+| Contradiction detection | ❌ | ✅ | ✅ |
+| Time-decay with floor | ❌ | ✅ | ✅ |
+| Typed memories | ❌ | ✅ | ✅ |
+| Graph relationships | ❌ | ✅ Typed edges | ✅ |
+| Raw chunk fallback | ✅ | ❌ | ✅ |
+| Open source engine | ❌ Proprietary API | ✅ Apache-2.0 | ✅ |
+
+Neither project needed to change. They just needed each other.
 
 ---
 
@@ -12,129 +36,68 @@ Every AI coding agent has the same fatal flaw: **amnesia**.
 
 - **Mid-session:** Context compacts. The agent forgets what you decided 20 minutes ago.
 - **Cross-session:** Close the terminal, come back tomorrow. Blank slate.
-- **Accumulated knowledge:** That bug you spent 4 hours debugging last week? Gone. The architecture decision you made with reasoning? Gone.
+- **Accumulated knowledge:** That bug you spent 4 hours debugging last week? The architecture decision you made with careful reasoning? Gone.
 
-Current workarounds are all flawed:
+The workarounds all have gaps:
 
-| Approach | Problem |
-|----------|---------|
-| `CLAUDE.md` / notes files | Manual, lossy — you forget to update them |
-| MCP memory servers | Agent must *choose* to call `remember()` (it often doesn't) |
-| Chat history search | No semantic understanding, just string matching |
-| Progress files | Manual checkpoint, doesn't capture the *why* |
+| Approach | Gap |
+|----------|-----|
+| `CLAUDE.md` / notes files | Manual — you forget to update them, especially after frustrating sessions |
+| MCP memory servers | Agent must *choose* to call `remember()` — it often doesn't |
+| Chat history search | String matching, no semantic understanding |
+| Progress files | Manual checkpoint, captures what *you* thought mattered, not what the agent needs |
 
-## The Solution
+The core insight from Supermemory's design: **if the agent has to decide to remember, it won't**. Memory has to be invisible — captured and recalled through hooks that fire on every turn, not tools the agent might skip.
 
-`openclaw-omega` uses **lifecycle hooks** to capture and recall memories *implicitly* — meaning the agent never decides whether to remember something. It just happens, on every turn, in the background.
+---
 
-**Capture** (after every agent response):
+## How It Works
+
+### Capture (after every agent response)
+
 ```
 You: "Let's use PostgreSQL instead of MongoDB — we need ACID for payments."
 Agent: "Good call. I'll update the schema..."
 
-→ Automatically classified as: decision (confidence: 0.92)
-→ Stored: "Chose PostgreSQL over MongoDB for orders service — need ACID for payments"
-→ Also stored: raw conversation chunk as fallback
+→ Hook fires automatically
+→ Classified as: decision (confidence: 0.92)
+→ Stored in OMEGA: "Chose PostgreSQL over MongoDB for orders service — need ACID for payments"
+→ Raw conversation chunk also stored as fallback
 ```
 
-**Recall** (before every agent response):
+### Recall (before every agent response)
+
 ```
 You: "Set up the database connection for the orders service"
 
-→ Semantic search fires automatically
-→ Injects into agent context:
-  [decision | 2 hours ago | score: 0.87]
+→ Hook fires automatically
+→ Semantic search finds relevant memories
+→ Injected into agent context:
+
+  === RELEVANT MEMORIES (auto-recalled) ===
+
+  [decision | 2 hours ago | score: 0.87 | accessed: 3x]
   Chose PostgreSQL over MongoDB for orders service — need ACID for payments.
+
+  [user_preference | 3 days ago | score: 0.82 | accessed: 7x]
+  Always use early returns. Never nest more than 2 levels.
+
+  === END MEMORIES ===
 
 → Agent responds knowing the decision without you repeating it
 ```
 
-## What Makes This Different
+### Content Classification
 
-This plugin combines two open-source projects that are each incomplete alone:
-
-| Capability | Supermemory (hooks) | OMEGA (engine) | **openclaw-omega** |
-|------------|--------------------|-----------------|--------------------|
-| Implicit capture (no agent decision) | ✅ | ❌ Tool-based | ✅ |
-| Implicit recall (no agent decision) | ✅ | ❌ Tool-based | ✅ |
-| Fully local / no cloud | ❌ $20/mo API | ✅ SQLite + ONNX | ✅ |
-| Contradiction detection | ❌ | ✅ | ✅ |
-| Time-decay with floor | ❌ | ✅ | ✅ |
-| Typed memories | ❌ | ✅ | ✅ |
-| Graph relationships | ❌ | ✅ | ✅ |
-| Raw chunk fallback | ✅ | ❌ | ✅ |
-| Open source engine | ❌ Proprietary | ✅ Apache-2.0 | ✅ |
-
-**Supermemory** figured out the *when* and *how* — hook-based implicit capture/recall is the right UX pattern. But it requires a paid cloud API.
-
-**OMEGA** figured out the *what* and *where* — local SQLite + ONNX embeddings with contradiction detection, time-decay, and typed memory. But it requires the agent to actively call tools.
-
-We took the best of both.
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────┐
-│                  Agent Runtime (OpenClaw / Claude Code) │
-│                                                        │
-│  ┌─────────────┐    Events     ┌───────────────────┐  │
-│  │   Agent      │──────────────▶│ openclaw-omega     │  │
-│  │   Loop       │◀──────────────│ plugin             │  │
-│  └─────────────┘  inject ctx   │                     │  │
-│                                 │  core/              │  │
-│                                 │    classifier.ts    │  │
-│                                 │    omega-client.ts  │  │
-│                                 │    formatter.ts     │  │
-│                                 │  adapters/          │  │
-│                                 │    openclaw/        │  │
-│                                 │    claude-code/     │  │
-│                                 └────────┬────────┘  │
-│                                          │            │
-└──────────────────────────────────────────┼────────────┘
-                                           │ Python subprocess / UDS socket
-                              ┌────────────▼────────────┐
-                              │   OMEGA Python Engine     │
-                              │                           │
-                              │  SQLite + ONNX embeddings │
-                              │  Contradiction detection  │
-                              │  Time-decay + typed memory│
-                              │  Graph relationships      │
-                              └───────────────────────────┘
-```
-
-## Platform Support
-
-The core memory logic is platform-agnostic. Thin adapter layers wire it into each runtime:
-
-| Platform | Adapter | Hook Mechanism | Status |
-|----------|---------|---------------|--------|
-| **OpenClaw** | `adapters/openclaw/` | `before_agent_start` / `agent_end` lifecycle hooks | ✅ Built |
-| **Claude Code** | `adapters/claude-code/` | `PreToolUse` / `PostToolUse` / `Stop` hooks (stdin/stdout JSON) | 🚧 Coming |
-
-One codebase, two entry points.
-
-## How It Works
-
-### Memory Types
-
-Every captured turn is classified locally (no LLM call) using pattern matching:
+Every captured turn is classified locally using pattern matching — no LLM call needed:
 
 | Type | Triggered By | Example |
 |------|-------------|---------|
 | `decision` | "we chose", "let's go with", "decided to" | "Chose PostgreSQL over MongoDB for ACID compliance" |
-| `lesson` | "the fix was", "root cause", "turned out" | "ECONNRESET was from connection pool exhaustion — set maxSockets=50" |
-| `user_preference` | "always use", "never", "prefer", "my style" | "Always use early returns, max 2 nesting levels" |
+| `lesson` | "the fix was", "root cause", "turned out" | "ECONNRESET was connection pool exhaustion — set maxSockets=50" |
+| `user_preference` | "always use", "never", "prefer" | "Always use early returns, max 2 nesting levels" |
 | `error_pattern` | "bug was", "error:", "fixed by" | "Jest mock not clearing — need jest.restoreAllMocks() in afterEach" |
-| `general` | Default fallback | Conversation context that doesn't match a specific pattern |
-
-### Fail-Open Design
-
-Memory should never break your workflow. Every operation is fail-open:
-
-- OMEGA unreachable? → Log warning, continue without memory.
-- Classification fails? → Default to `general` type.
-- Recall returns nothing? → Agent proceeds normally.
-- Capture errors? → Skip silently, never block the agent.
+| `general` | Default fallback | Conversation context without a specific signal |
 
 ### Dual-Save Strategy
 
@@ -143,7 +106,74 @@ Every captured turn stores two things (ported from Supermemory's approach):
 1. **Extracted fact** — classified and condensed (e.g., "Chose PostgreSQL for ACID compliance")
 2. **Raw chunk** — full sanitized conversation turn as fallback
 
-This means semantic search hits the concise fact, but the full context is always available when nuance matters.
+Semantic search hits the concise fact for precision. The raw chunk preserves nuance when the extraction misses something.
+
+### Fail-Open Design
+
+Memory should never break your workflow:
+
+- OMEGA unreachable → Log warning, continue without memory
+- Classification fails → Default to `general` type
+- Recall returns nothing → Agent proceeds normally
+- Capture errors → Skip silently, never block the agent
+
+---
+
+## Platform Support
+
+The core memory logic is platform-agnostic. Thin adapter layers wire it into each runtime:
+
+| Platform | Hook Mechanism | Status |
+|----------|---------------|--------|
+| **OpenClaw** | `before_agent_start` / `agent_end` lifecycle hooks | ✅ Built |
+| **Claude Code** | `PreToolUse` / `PostToolUse` / `Stop` hooks (stdin/stdout JSON) | 🚧 Coming |
+
+One codebase, two entry points. The adapter layer is ~50 lines per platform — everything else is shared.
+
+---
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────┐
+│            Agent Runtime (OpenClaw or Claude Code)         │
+│                                                            │
+│  ┌─────────────┐              ┌─────────────────────────┐ │
+│  │   Agent      │── events ──▶│  agentic-recall          │ │
+│  │   Loop       │◀─ inject ──│                           │ │
+│  └─────────────┘              │  core/                   │ │
+│                                │    classifier.ts         │ │
+│                                │    omega-client.ts       │ │
+│                                │    formatter.ts          │ │
+│                                │                          │ │
+│                                │  adapters/               │ │
+│                                │    openclaw/  claude-code/│ │
+│                                └──────────┬──────────────┘ │
+└───────────────────────────────────────────┼────────────────┘
+                                            │ Python subprocess
+                                            │ (Phase 2: UDS socket)
+                               ┌────────────▼────────────┐
+                               │   OMEGA Python Engine     │
+                               │                           │
+                               │  SQLite + ONNX embeddings │
+                               │  Contradiction detection  │
+                               │  Time-decay + typed memory│
+                               │  Graph relationships      │
+                               └───────────────────────────┘
+```
+
+### Bridge: TypeScript → Python
+
+OMEGA is Python. The plugin is TypeScript. The bridge has two phases:
+
+| Phase | Approach | Latency | Status |
+|-------|----------|---------|--------|
+| **MVP** | Shell out to `python3 -c "from omega import ..."` | ~200ms | ✅ Built |
+| **Phase 2** | UDS socket to OMEGA daemon | ~5ms | Planned |
+
+Phase 2 connects directly to OMEGA's existing daemon socket — no new infrastructure needed.
+
+---
 
 ## Installation
 
@@ -156,12 +186,8 @@ This means semantic search hits the concise fact, but the full context is always
 ### OpenClaw
 
 ```bash
-# Install the plugin
-openclaw plugin install openclaw-omega
-
-# Or from source
-git clone https://github.com/somedumbguy/openclaw-omega
-cd openclaw-omega
+git clone https://github.com/somedumbguy/agentic-recall
+cd agentic-recall
 npm install
 npm run build
 ```
@@ -172,12 +198,12 @@ npm run build
 # Copy hook config to your project
 cp adapters/claude-code/hooks.json .claude/settings.local.json
 
-# That's it — hooks fire automatically
+# Hooks fire automatically on every turn
 ```
 
-## Configuration
+---
 
-All settings go in your plugin config or environment:
+## Configuration
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -191,14 +217,16 @@ All settings go in your plugin config or environment:
 | `dualSave` | boolean | `true` | Store both extracted facts and raw chunks |
 | `debug` | boolean | `false` | Verbose logging |
 
+---
+
 ## Project Structure
 
 ```
-openclaw-omega/
-├── core/                    # Platform-agnostic memory logic
+agentic-recall/
+├── core/                    # Platform-agnostic memory logic (shared)
 │   ├── omega-client.ts      # Python bridge (subprocess / UDS)
 │   ├── classifier.ts        # Rule-based content type classification
-│   ├── formatter.ts         # Memory formatting for injection
+│   ├── formatter.ts         # Memory formatting for context injection
 │   ├── profile.ts           # User profile aggregation
 │   └── types.ts             # Shared TypeScript types
 ├── adapters/
@@ -211,7 +239,6 @@ openclaw-omega/
 │       ├── capture.sh       # PostToolUse stdin/stdout bridge
 │       └── hooks.json       # Claude Code hook config
 ├── tools/                   # Explicit agent tools (search, store, forget, profile)
-├── hooks/                   # Legacy hook entry points
 ├── lib/                     # Utilities (validation, sanitization, logging)
 ├── tests/                   # Unit + integration tests
 ├── omega-hooks-prd.md       # Full build specification
@@ -219,38 +246,45 @@ openclaw-omega/
 └── claude-progress.txt      # Build progress tracker
 ```
 
+---
+
 ## How It Was Built
 
-This entire plugin was built autonomously by Claude Code in a single session using:
+This plugin was built autonomously by Claude Code in a single session.
 
-- **[Ralph Wiggum](https://github.com/anthropics/claude-code-plugins)** — Autonomous loop plugin that kept Claude Code iterating through all build tasks without human intervention
-- **[Effective Harnesses pattern](https://docs.anthropic.com/en/docs/claude-code)** — `claude-progress.txt` + git commits as breadcrumbs surviving context compaction
+The build spec (`omega-hooks-prd.md`) was written collaboratively in a prior session — analyzing both Supermemory and OMEGA's source code, mapping their APIs, and designing the integration layer. That spec was then fed to Claude Code with a single autonomous prompt using:
+
+- **Ralph Wiggum** — autonomous loop plugin that kept Claude Code iterating through all build tasks without human intervention
+- **Effective Harnesses pattern** — `claude-progress.txt` + git commits as breadcrumbs surviving context compaction
 - **Custom subagents** — `reference-reader` (studied Supermemory/OMEGA source), `test-runner` (isolated test execution), `integration-tester` (OMEGA bridge verification)
-- **[Context7 MCP](https://github.com/upstash/context7)** — Live library docs instead of hallucinated APIs
+- **Context7 MCP** — live library documentation instead of hallucinated APIs
 
-The build spec (`omega-hooks-prd.md`) was written collaboratively in a prior session, then fed to Claude Code with a single autonomous prompt. The full research and methodology is documented in `autonomous-build-research.md`.
+The full research and methodology is documented in the repo.
+
+---
 
 ## Roadmap
 
-- [x] Core memory engine integration (OMEGA bridge)
-- [x] Rule-based content classifier
-- [x] Auto-recall hook (OpenClaw)
-- [x] Auto-capture hook (OpenClaw)
-- [x] Dual-save (extracted facts + raw chunks)
+- [x] Core memory engine integration (OMEGA bridge via subprocess)
+- [x] Rule-based content classifier (5 memory types)
+- [x] Auto-recall hook (OpenClaw adapter)
+- [x] Auto-capture hook with dual-save (OpenClaw adapter)
 - [x] Explicit tools (search, store, forget, profile)
-- [x] Fail-open error handling
-- [ ] Claude Code adapter (PreToolUse/PostToolUse hooks)
+- [x] Fail-open error handling throughout
+- [ ] **Claude Code adapter** (PreToolUse / PostToolUse / Stop hooks)
 - [ ] UDS socket bridge (Phase 2 — ~5ms vs ~200ms latency)
-- [ ] MCP server mode (alternative to hooks)
+- [ ] MCP server mode (alternative integration path)
 - [ ] Profile aggregation improvements
 - [ ] Multi-project memory isolation
 
+---
+
 ## Credits
 
-Built on the shoulders of:
+Built by combining the best ideas from two projects:
 
-- **[OMEGA](https://github.com/omega-memory/omega-memory)** (Apache-2.0) — Local-first memory engine with SQLite, ONNX embeddings, contradiction detection, time-decay, and graph relationships
-- **[Supermemory](https://github.com/supermemoryai/openclaw-supermemory)** (MIT) — Pioneered the hook-based implicit capture/recall pattern for AI agents
+- **[Supermemory](https://github.com/supermemoryai/openclaw-supermemory)** (MIT) — Pioneered hook-based implicit capture/recall. Proved that memory should be invisible, not a tool the agent decides to use.
+- **[OMEGA](https://github.com/omega-memory/omega-memory)** (Apache-2.0) — Built the engine: local SQLite, ONNX embeddings, contradiction detection, time-decay, typed memory, graph relationships. Proved that memory can be sophisticated without a cloud.
 
 ## License
 

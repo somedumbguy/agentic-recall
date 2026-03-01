@@ -12,7 +12,7 @@ import { registerSlashCommands } from "./commands/slash.ts";
 import { registerCliCommands } from "./commands/cli.ts";
 
 export default {
-  id: "openclaw-omega",
+  id: "agentic-recall",
   name: "OMEGA Memory",
   description: "Automatic memory capture and recall backed by OMEGA's local-first memory engine",
   kind: "memory" as const,
