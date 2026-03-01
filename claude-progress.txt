@@ -1,0 +1,29 @@
+PHASE 1.5 — OBSERVABILITY: COMPLETE
+
+Commits:
+  270fa76  feat(observability): core modules — confidence light, state, event log, isolation, self-check
+  5971ea6  feat(observability): wire confidence light, event log, isolation into both adapters
+  72bd38f  feat(observability): CLI — 9 commands with tests
+  b3073ed  feat(observability): integration tests — 12 cross-adapter observability tests
+
+Test results: 208 passed, 0 failed, 25 suites
+TypeScript: zero errors
+
+Completion criteria met:
+  1. Confidence light scoring (green/yellow/red)          — lib/confidence-light.ts
+  2. Ring buffer tracks last 50 events per category        — lib/confidence-state.ts
+  3. Light rendered in both Claude Code and OpenClaw        — adapters/claude-code/recall.ts, hooks/recall.ts
+  4. Self-check runs periodically (25 turns / 5 min)       — lib/self-check.ts
+  5. Three-layer capture isolation                          — lib/isolation.ts
+  6. Event logger writes structured JSONL with rotation     — lib/event-log.ts
+  7. All hooks instrumented with event logging + light      — all 4 hook files
+  8. CLI commands: status, stats, doctor, search, log, browse, export, prune, light
+  9. Attribution tags (IDs + light in footer)               — lib/formatter.ts
+ 10. Stderr output for Claude Code verbose mode             — adapters/claude-code/recall.ts, capture.ts
+ 11. All existing tests pass (no regressions)
+ 12. All new tests pass
+ 13. TypeScript compiles with zero errors
+ 14. Git commits with feat(observability) prefix
+ 15. claude-progress.txt updated
+
+OBSERVABILITY_COMPLETE
