@@ -61,6 +61,98 @@ export interface CustomContainer {
   description: string;
 }
 
+// ── Observability ──
+
+export type LightColor = "green" | "yellow" | "red";
+
+export interface ConfidenceSignals {
+  recallSuccess: boolean;
+  memoriesFound: number;
+  memoriesInjected: number;
+  topScore: number;
+  avgScore: number;
+  recallLatency: number;
+
+  recentErrorCount: number;
+  recentSkipRate: number;
+  recentRecallMissRate: number;
+  consecutiveMisses: number;
+  avgRecentLatency: number;
+
+  omegaReachable: boolean;
+  lastCaptureAge: number;
+  lastSuccessfulRecall: number;
+}
+
+export interface ConfidenceLightResult {
+  color: LightColor;
+  reason: string;
+}
+
+export type EventType =
+  | "recall_start"
+  | "recall_hit"
+  | "recall_miss"
+  | "recall_error"
+  | "capture_start"
+  | "capture_stored"
+  | "capture_skipped"
+  | "capture_classified"
+  | "capture_error"
+  | "self_check"
+  | "diagnostic_mode"
+  | "connection_mode"
+  | "health_check"
+  | "config_loaded"
+  | "omega_call"
+  | "omega_error";
+
+export type Platform = "openclaw" | "claude-code";
+
+export interface LogEvent {
+  timestamp: string;
+  event: EventType;
+  session_id: string;
+  platform: Platform;
+  duration_ms: number;
+  light: LightColor;
+  details: Record<string, unknown>;
+}
+
+export interface CheckResult {
+  name: string;
+  status: "pass" | "warn" | "fail";
+  message: string;
+}
+
+export interface SelfCheckResult {
+  overall: LightColor;
+  checks: CheckResult[];
+  recommendations: string[];
+}
+
+export interface RecallEvent {
+  hit: boolean;
+  topScore: number;
+  count: number;
+  latency: number;
+  timestamp: number;
+}
+
+export interface CaptureEvent {
+  stored: boolean;
+  skipped: boolean;
+  type: string;
+  timestamp: number;
+}
+
+export interface OmegaCallEvent {
+  method: string;
+  latency: number;
+  success: boolean;
+  timestamp: number;
+}
+
 // ── Classifier ──
 
 export type MemoryType = "decision" | "lesson" | "user_preference" | "error_pattern" | "general";

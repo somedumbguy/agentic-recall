@@ -17,7 +17,8 @@
     "hooks/*.ts",
     "tools/*.ts",
     "commands/*.ts",
-    "adapters/**/*.ts"
+    "adapters/**/*.ts",
+    "cli/**/*.ts"
   ],
   "exclude": ["node_modules", "tests"]
 }

@@ -7,6 +7,7 @@ const ALLOWED_KEYS = new Set([
   "autoCapture", "captureMode", "captureMinLength", "captureMaxLength", "dualSave",
   "containerTag", "enableCustomContainerTags", "customContainers", "customContainerInstructions",
   "debug",
+  "selfCheckInterval", "selfCheckEveryNTurns", "eventLogPath",
 ]);
 
 function sanitizeTag(tag: string): string {
