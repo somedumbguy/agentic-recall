@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "bin": {
+    "agentic-recall": "cli/index.ts"
+  },
   "openclaw": {
     "extensions": ["./index.ts"]
   },
