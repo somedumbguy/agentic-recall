@@ -84,7 +84,7 @@ describe("E2E Smoke Test — Full Lifecycle", () => {
 
     expect(result).toBeDefined();
     expect(result!.prependContext).toContain("=== RELEVANT MEMORIES (auto-recalled) ===");
-    expect(result!.prependContext).toContain("=== END MEMORIES ===");
+    expect(result!.prependContext).toContain("=== END MEMORIES |");
   });
 
   it("step 3: classify content types correctly", () => {
@@ -122,7 +122,7 @@ describe("E2E Smoke Test — Full Lifecycle", () => {
     expect(block).toContain("=== RELEVANT MEMORIES (auto-recalled) ===");
     expect(block).toContain("[decision |");
     expect(block).toContain("score: 0.87");
-    expect(block).toContain("=== END MEMORIES ===");
+    expect(block).toContain("=== END MEMORIES");
   });
 
   it("step 6: sanitize injected context", () => {

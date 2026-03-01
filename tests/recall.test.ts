@@ -56,7 +56,7 @@ describe("recall hook", () => {
     expect(result).toBeDefined();
     expect(result!.prependContext).toContain("=== RELEVANT MEMORIES (auto-recalled) ===");
     expect(result!.prependContext).toContain("PostgreSQL");
-    expect(result!.prependContext).toContain("=== END MEMORIES ===");
+    expect(result!.prependContext).toContain("=== END MEMORIES |");
   });
 
   it("filters out memories below minScore", async () => {

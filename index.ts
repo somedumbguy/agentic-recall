@@ -2,6 +2,8 @@ import type { OpenClawPluginApi } from "./types/index.ts";
 import { parseConfig, configSchema } from "./config.ts";
 import { initLogger, log } from "./logger.ts";
 import { OmegaClient } from "./lib/omega-client.ts";
+import { ConfidenceState } from "./lib/confidence-state.ts";
+import { getEventLogger } from "./lib/event-log.ts";
 import { buildRecallHandler } from "./hooks/recall.ts";
 import { buildCaptureHandler } from "./hooks/capture.ts";
 import { registerSearchTool } from "./tools/search.ts";
@@ -25,14 +27,16 @@ export default {
     log.debug("Initializing OMEGA plugin...");
 
     const client = new OmegaClient(cfg);
+    const confidenceState = new ConfidenceState();
+    const eventLogger = getEventLogger();
 
     // Session key closure for capture hook
     let sessionKey: string | undefined;
     const getSessionKey = () => sessionKey;
 
-    // Register hooks
+    // Register hooks (shared confidence state)
     if (cfg.autoRecall) {
-      const recallHandler = buildRecallHandler(client, cfg);
+      const recallHandler = buildRecallHandler(client, cfg, confidenceState);
       api.on("before_agent_start", async (ctx) => {
         sessionKey = ctx.sessionKey;
         return recallHandler(ctx);
@@ -41,7 +45,7 @@ export default {
     }
 
     if (cfg.autoCapture) {
-      const captureHandler = buildCaptureHandler(client, cfg, getSessionKey);
+      const captureHandler = buildCaptureHandler(client, cfg, getSessionKey, confidenceState);
       api.on("agent_end", async (ctx) => {
         await captureHandler(ctx);
       });
@@ -63,6 +67,12 @@ export default {
       start: async () => {
         log.debug("OMEGA plugin starting...");
         const health = await client.health();
+
+        await eventLogger.log("health_check", "", "openclaw", 0, health.ok ? "green" : "red", {
+          omega_available: health.ok, memoryCount: health.memoryCount,
+        });
+        await eventLogger.flush();
+
         if (health.ok) {
           log.debug("OMEGA engine is healthy");
         } else {
@@ -70,6 +80,7 @@ export default {
         }
       },
       stop: async () => {
+        await eventLogger.close();
         log.debug("OMEGA plugin stopping");
       },
     });

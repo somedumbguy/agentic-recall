@@ -52,7 +52,7 @@ describe("formatMemoryEntry", () => {
     const result = formatMemoryEntry(mem);
     expect(result).toContain("[decision |");
     expect(result).toContain("score: 0.87");
-    expect(result).toContain("accessed: 3x]");
+    expect(result).toContain("accessed: 3x");
     expect(result).toContain("We chose PostgreSQL");
   });
 

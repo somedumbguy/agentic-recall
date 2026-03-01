@@ -2,6 +2,10 @@ import type { OmegaConfig, EventContext, ConversationMessage, ContentBlock } fro
 import type { OmegaClient } from "../lib/omega-client.ts";
 import { sanitizeFull, validateContentLength } from "../lib/validate.ts";
 import { classify } from "../lib/classifier.ts";
+import { shouldSkipCapture, stripMemorySystemContent } from "../lib/isolation.ts";
+import { ConfidenceState } from "../lib/confidence-state.ts";
+import { computeLight } from "../lib/confidence-light.ts";
+import { getEventLogger } from "../lib/event-log.ts";
 import { log } from "../logger.ts";
 
 function extractText(content: string | ContentBlock[]): string {
@@ -40,11 +44,17 @@ export function buildCaptureHandler(
   client: OmegaClient,
   cfg: OmegaConfig,
   getSessionKey?: () => string | undefined,
+  confidenceState?: ConfidenceState,
 ): (ctx: EventContext) => Promise<void> {
+  const state = confidenceState ?? new ConfidenceState();
+  const eventLogger = getEventLogger();
+
   return async (ctx: EventContext): Promise<void> => {
     if (!cfg.autoCapture) return;
 
     try {
+      const sessionId = getSessionKey?.() ?? "";
+
       if (ctx.success === false) {
         log.debug("Skipping capture: agent turn was not successful");
         return;
@@ -56,14 +66,35 @@ export function buildCaptureHandler(
         return;
       }
 
-      // Sanitize: strip injected context, system prefixes, control chars
-      const sanitizedUser = sanitizeFull(turn.user);
-      const sanitizedAssistant = sanitizeFull(turn.assistant);
+      const startTime = Date.now();
+
+      // Isolation check (meta-memory patterns + diagnostic mode)
+      const skipReason = shouldSkipCapture(turn.user, turn.assistant);
+      if (skipReason) {
+        state.recordCapture(false, true, skipReason);
+        await eventLogger.log("capture_skipped", sessionId, "openclaw", Date.now() - startTime, "green", {
+          reason: skipReason,
+        });
+        await eventLogger.flush();
+        log.debug(`Skipping capture: ${skipReason}`);
+        return;
+      }
+
+      // Layer 3: Strip memory system content + sanitize
+      const strippedUser = stripMemorySystemContent(turn.user);
+      const strippedAssistant = stripMemorySystemContent(turn.assistant);
+      const sanitizedUser = sanitizeFull(strippedUser);
+      const sanitizedAssistant = sanitizeFull(strippedAssistant);
       const combined = `[user]\n${sanitizedUser}\n[/user]\n[assistant]\n${sanitizedAssistant}\n[/assistant]`;
 
       // Validate length
       const validation = validateContentLength(combined, cfg.captureMinLength, cfg.captureMaxLength);
       if (!validation.valid) {
+        state.recordCapture(false, true, "validation");
+        await eventLogger.log("capture_skipped", sessionId, "openclaw", Date.now() - startTime, "green", {
+          reason: combined.length < cfg.captureMinLength ? "too_short" : "too_long",
+        });
+        await eventLogger.flush();
         log.debug(`Skipping capture: ${validation.reason}`);
         return;
       }
@@ -74,19 +105,39 @@ export function buildCaptureHandler(
 
       // In smart mode, only capture if confidence > 0.5
       if (cfg.captureMode === "smart" && classification.confidence <= 0.5) {
+        state.recordCapture(false, true, "low_confidence");
+        await eventLogger.log("capture_skipped", sessionId, "openclaw", Date.now() - startTime, "green", {
+          reason: "low_confidence",
+        });
+        await eventLogger.flush();
         log.debug("Skipping capture: smart mode and low confidence");
         return;
       }
 
       // Store extracted fact with classified type
+      const storeStart = Date.now();
       await client.store(classification.extractedFact, classification.type);
+      state.recordOmegaCall("store", Date.now() - storeStart, true);
       log.debug(`Stored extracted fact as ${classification.type}`);
 
       // Dual-save: also store raw chunk
       if (cfg.dualSave) {
+        const dualStart = Date.now();
         await client.store(combined, "conversation_chunk");
+        state.recordOmegaCall("store", Date.now() - dualStart, true);
         log.debug("Stored raw conversation chunk");
       }
+
+      state.recordCapture(true, false, classification.type);
+
+      const totalMs = Date.now() - startTime;
+      const signals = state.getSignals();
+      const light = computeLight(signals);
+
+      await eventLogger.log("capture_stored", sessionId, "openclaw", totalMs, light.color, {
+        type: classification.type, confidence: classification.confidence, dual_save: cfg.dualSave,
+      });
+      await eventLogger.flush();
     } catch (err) {
       log.warn("Capture hook error (fail-open):", err instanceof Error ? err.message : String(err));
       // fail-open: never block the agent

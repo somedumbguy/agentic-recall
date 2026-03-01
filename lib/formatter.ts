@@ -1,4 +1,5 @@
-import type { OmegaMemory } from "../types/index.ts";
+import type { OmegaMemory, LightColor, ConfidenceLightResult } from "../types/index.ts";
+import { lightEmoji } from "./confidence-light.ts";
 
 /**
  * Format a timestamp into a human-readable relative time string.
@@ -28,43 +29,69 @@ export function formatRelativeTime(dateStr: string): string {
 }
 
 /**
- * Format a single memory entry for display.
+ * Format a single memory entry for display (with attribution).
  */
 export function formatMemoryEntry(memory: OmegaMemory): string {
   const relTime = formatRelativeTime(memory.created_at);
   const score = memory.score.toFixed(2);
   const accessed = memory.accessed_count;
-  return `[${memory.type} | ${relTime} | score: ${score} | accessed: ${accessed}x]\n${memory.content}`;
+  return `[${memory.type} | ${relTime} | score: ${score} | accessed: ${accessed}x | id: ${memory.id}]\n${memory.content}`;
+}
+
+export interface FooterOptions {
+  light?: ConfidenceLightResult;
+  count?: number;
+  latencyMs?: number;
 }
 
 /**
  * Format an array of memories into a context injection block.
+ * Includes attribution IDs on each memory and confidence light in footer.
  */
 export function formatMemoriesBlock(
   memories: OmegaMemory[],
   profileMemories?: OmegaMemory[],
+  footer?: FooterOptions,
 ): string {
-  if (memories.length === 0 && (!profileMemories || profileMemories.length === 0)) {
+  if (memories.length === 0 && (!profileMemories || profileMemories.length === 0) && !footer?.light) {
     return "";
   }
 
   const parts: string[] = [];
-  parts.push("=== RELEVANT MEMORIES (auto-recalled) ===");
-  parts.push("");
 
-  for (const mem of memories) {
-    parts.push(formatMemoryEntry(mem));
+  if (memories.length > 0 || (profileMemories && profileMemories.length > 0)) {
+    parts.push("=== RELEVANT MEMORIES (auto-recalled) ===");
     parts.push("");
-  }
 
-  if (profileMemories && profileMemories.length > 0) {
-    parts.push("=== USER PROFILE ===");
-    for (const mem of profileMemories) {
-      parts.push(`- ${mem.content}`);
+    for (const mem of memories) {
+      parts.push(formatMemoryEntry(mem));
+      parts.push("");
     }
-    parts.push("");
+
+    if (profileMemories && profileMemories.length > 0) {
+      parts.push("=== USER PROFILE ===");
+      for (const mem of profileMemories) {
+        parts.push(`- ${mem.content}`);
+      }
+      parts.push("");
+    }
   }
 
-  parts.push("=== END MEMORIES ===");
+  // Footer with confidence light
+  if (footer?.light) {
+    const emoji = lightEmoji(footer.light.color);
+    const count = footer.count ?? memories.length;
+    const latency = footer.latencyMs != null ? `, ${footer.latencyMs}ms` : "";
+    const reason = footer.light.reason ? ` ${footer.light.reason}` : "";
+
+    if (footer.light.color === "red" && memories.length === 0) {
+      parts.push(`=== RECALL SKIPPED | ${emoji} ${footer.light.reason} ===`);
+    } else {
+      parts.push(`=== END MEMORIES | ${emoji} ${count} memories${latency}${reason ? " —" + reason : ""} ===`);
+    }
+  } else {
+    parts.push("=== END MEMORIES ===");
+  }
+
   return parts.join("\n");
 }
