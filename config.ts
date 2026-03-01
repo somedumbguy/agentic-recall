@@ -90,6 +90,29 @@ export function parseConfig(raw: unknown): OmegaConfig {
   };
 }
 
+/**
+ * Build an OmegaConfig from AGENTIC_RECALL_* environment variables.
+ * Used by Claude Code adapter hooks (no plugin config system available).
+ * Falls back to defaults for any unset variable.
+ */
+export function getConfigFromEnv(): OmegaConfig {
+  const env = process.env;
+
+  const raw: Record<string, unknown> = {};
+
+  if (env.AGENTIC_RECALL_PYTHON_PATH) raw.pythonPath = env.AGENTIC_RECALL_PYTHON_PATH;
+  if (env.AGENTIC_RECALL_DB_PATH) raw.dbPath = env.AGENTIC_RECALL_DB_PATH;
+  if (env.AGENTIC_RECALL_AUTO_RECALL !== undefined) raw.autoRecall = env.AGENTIC_RECALL_AUTO_RECALL !== "false";
+  if (env.AGENTIC_RECALL_AUTO_CAPTURE !== undefined) raw.autoCapture = env.AGENTIC_RECALL_AUTO_CAPTURE !== "false";
+  if (env.AGENTIC_RECALL_MAX_RESULTS) raw.maxRecallResults = Number(env.AGENTIC_RECALL_MAX_RESULTS);
+  if (env.AGENTIC_RECALL_MIN_SCORE) raw.recallMinScore = Number(env.AGENTIC_RECALL_MIN_SCORE);
+  if (env.AGENTIC_RECALL_CAPTURE_MODE) raw.captureMode = env.AGENTIC_RECALL_CAPTURE_MODE;
+  if (env.AGENTIC_RECALL_DUAL_SAVE !== undefined) raw.dualSave = env.AGENTIC_RECALL_DUAL_SAVE !== "false";
+  if (env.AGENTIC_RECALL_DEBUG !== undefined) raw.debug = env.AGENTIC_RECALL_DEBUG === "true";
+
+  return parseConfig(raw);
+}
+
 export const configSchema = {
   parse: parseConfig,
 };

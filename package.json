@@ -8,7 +8,8 @@
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose"
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose",
+    "install:claude-code": "bash adapters/claude-code/install.sh"
   },
   "peerDependencies": {
     "openclaw": ">=2026.1.29"
