@@ -68,10 +68,17 @@ print(json.dumps([{
     const typeEscaped = escapeForPython(type);
 
     const script = `
-import json
+import json, re
 from omega import store
 result = store('${escaped}', event_type='${typeEscaped}')
-print(json.dumps({'id': str(result.get('id', result.get('memory_id', '')))}))
+if isinstance(result, dict):
+    mid = str(result.get('id', result.get('memory_id', '')))
+elif isinstance(result, str):
+    m = re.search(r'Node ID.*?[\x60]([^\x60]+)[\x60]', result)
+    mid = m.group(1) if m else ''
+else:
+    mid = ''
+print(json.dumps({'id': mid}))
 `;
     try {
       const stdout = await runPython(this.pythonPath, script);
