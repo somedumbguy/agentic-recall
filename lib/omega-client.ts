@@ -39,20 +39,20 @@ export class OmegaClient {
   async query(text: string, options?: { type?: string; limit?: number }): Promise<OmegaMemory[]> {
     const limit = options?.limit ?? 10;
     const escaped = escapeForPython(text);
-    const typeFilter = options?.type ? `, type='${escapeForPython(options.type)}'` : "";
+    const typeFilter = options?.type ? `, event_type='${escapeForPython(options.type)}'` : "";
 
     const script = `
 import json
-from omega import query
-results = query('${escaped}', limit=${limit}${typeFilter})
+from omega import query_structured
+results = query_structured('${escaped}', limit=${limit}${typeFilter})
 print(json.dumps([{
-  'id': str(getattr(r, 'id', '')),
-  'content': str(getattr(r, 'content', '')),
-  'type': str(getattr(r, 'type', 'general')),
-  'score': float(getattr(r, 'score', 0)),
-  'created_at': str(getattr(r, 'created_at', '')),
-  'accessed_count': int(getattr(r, 'accessed_count', 0)),
-  'tags': list(getattr(r, 'tags', []) or [])
+  'id': str(r.get('id', '')),
+  'content': str(r.get('content', '')),
+  'type': str(r.get('event_type', 'general')),
+  'score': float(r.get('relevance', 0)),
+  'created_at': str(r.get('created_at', '')),
+  'accessed_count': int(r.get('metadata', {}).get('accessed_count', 0)),
+  'tags': list(r.get('tags', []) or [])
 } for r in results]))
 `;
     try {
@@ -70,8 +70,8 @@ print(json.dumps([{
     const script = `
 import json
 from omega import store
-result = store('${escaped}', type='${typeEscaped}')
-print(json.dumps({'id': str(getattr(result, 'id', getattr(result, 'memory_id', '')))}))
+result = store('${escaped}', event_type='${typeEscaped}')
+print(json.dumps({'id': str(result.get('id', result.get('memory_id', '')))}))
 `;
     try {
       const stdout = await runPython(this.pythonPath, script);
@@ -106,8 +106,8 @@ print(json.dumps({'deleted': bool(result)}))
     const script = `
 import json
 try:
-    from omega import query
-    results = query('health check', limit=1)
+    from omega import query_structured
+    results = query_structured('health check', limit=1)
     print(json.dumps({'ok': True, 'memoryCount': 0, 'dbSize': 'unknown'}))
 except Exception as e:
     print(json.dumps({'ok': False, 'memoryCount': 0, 'dbSize': str(e)}))

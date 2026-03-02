@@ -31,7 +31,7 @@ export async function handleInit(): Promise<void> {
 
   let omegaOk = false;
   try {
-    execFileSync(config.pythonPath, ["-c", "from omega import store, query"], {
+    execFileSync(config.pythonPath, ["-c", "from omega import store, query_structured"], {
       timeout: 10000,
       stdio: ["pipe", "pipe", "pipe"],
     });
